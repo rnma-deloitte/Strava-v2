@@ -183,8 +183,7 @@ with st.sidebar:
 
 # Main content
 st.markdown("""
-<div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="color: #FC4C02; font-size: 2.5rem; margin-bottom: 5px;">🏃 2026 Activity Stats</h1>
+<div style="margin-bottom: 30px;">
 </div>
 """, unsafe_allow_html=True)
 
