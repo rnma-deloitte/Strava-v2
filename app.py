@@ -108,18 +108,18 @@ st.markdown("""
     /* Calendar styling */
     .calendar-month {
         background: white;
-        border-radius: 12px;
-        padding: 15px;
-        margin: 10px;
+        border-radius: 8px;
+        padding: 8px;
+        margin: 5px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        text-align: left;
     }
     
     .calendar-title {
         color: var(--strava-black);
         font-weight: bold;
-        text-align: center;
-        margin-bottom: 10px;
-        font-size: 1.2rem;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
     }
     
     /* Hide Streamlit branding */
