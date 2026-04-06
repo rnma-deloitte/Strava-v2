@@ -182,10 +182,6 @@ with st.sidebar:
         refresh_strava_data()
 
 # Main content
-st.markdown("""
-<div style="margin-bottom: 30px;">
-</div>
-""", unsafe_allow_html=True)
 
 # 3. Pull data from Supabase to show on screen
 df_data = conn.table("activities").select("*").execute()
