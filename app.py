@@ -282,9 +282,19 @@ if not df.empty:
             for i, month_name in enumerate(months_to_show[row:row+3]):
                 month_idx = months.index(month_name)  # Get the month index (0-based)
                 with cols[i]:
+                    # Calculate total km for this month
+                    month_activities = df_2026[
+                        (df_2026['start_date'].dt.month == month_idx + 1) & 
+                        (df_2026['start_date'].dt.year == current_year)
+                    ]
+                    month_total_km = month_activities['distance'].sum() / 1000
+                    
                     st.markdown(f"""
                     <div class="calendar-month">
-                        <div class="calendar-title">{month_name} {current_year}</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div class="calendar-title">{month_name} {current_year}</div>
+                            <div style="color: #FC4C02; font-weight: bold; font-size: 0.9rem;">{month_total_km:.1f} km</div>
+                        </div>
                     </div>
                     """, unsafe_allow_html=True)
                     
