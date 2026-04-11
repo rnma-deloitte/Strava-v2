@@ -236,31 +236,45 @@ if not df.empty:
     ride_km = ride_df['distance'].sum() / 1000
     run_km = run_df['distance'].sum() / 1000
     
+    # Calculate hours from moving_time (in seconds)
+    swim_hours = swim_df['moving_time'].sum() / 3600
+    ride_hours = ride_df['moving_time'].sum() / 3600
+    run_hours = run_df['moving_time'].sum() / 3600
+    
     # KPI boxes with Strava styling
     st.markdown("### 📊 2026 Activity Summary")
     col1, col2, col3 = st.columns(3)
     
     with col1:
         st.markdown(f"""
-        <div class="kpi-container">
-            <div class="kpi-value">{swim_km:.1f} km</div>
-            <div class="kpi-label">Swim Distance</div>
+        <div class="kpi-container" style="display: flex; align-items: center; gap: 15px;">
+            <div style="font-size: 3rem;">🏊</div>
+            <div>
+                <div class="kpi-value">{swim_km:.1f} km</div>
+                <div class="kpi-value">{swim_hours:.1f} hours</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
         st.markdown(f"""
-        <div class="kpi-container">
-            <div class="kpi-value">{ride_km:.1f} km</div>
-            <div class="kpi-label">Ride Distance</div>
+        <div class="kpi-container" style="display: flex; align-items: center; gap: 15px;">
+            <div style="font-size: 3rem;">🚴</div>
+            <div>
+                <div class="kpi-value">{ride_km:.1f} km</div>
+                <div class="kpi-value">{ride_hours:.1f} hours</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
     with col3:
         st.markdown(f"""
-        <div class="kpi-container">
-            <div class="kpi-value">{run_km:.1f} km</div>
-            <div class="kpi-label">Run Distance</div>
+        <div class="kpi-container" style="display: flex; align-items: center; gap: 15px;">
+            <div style="font-size: 3rem;">🏃</div>
+            <div>
+                <div class="kpi-value">{run_km:.1f} km</div>
+                <div class="kpi-value">{run_hours:.1f} hours</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -288,10 +302,12 @@ if not df.empty:
         """, unsafe_allow_html=True)
     
     with col3:
-        favorite_sport = df['type'].mode()[0] if not df['type'].empty else "None"
+        favorite_sport = df_2026['type'].mode()[0] if not df_2026['type'].empty else "None"
+        # Map Workout to Basketball for display
+        display_sport = "Basketball" if favorite_sport == "Workout" else favorite_sport
         st.markdown(f"""
         <div class="metric-container">
-            <div class="metric-value">{favorite_sport}</div>
+            <div class="metric-value">{display_sport}</div>
             <div class="metric-label">Favorite Sport</div>
         </div>
         """, unsafe_allow_html=True)
