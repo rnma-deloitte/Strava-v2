@@ -152,7 +152,9 @@ conn = st.connection("supabase", type=SupabaseConnection)
 # 2. Function to fetch data from Strava (The "Refresh" Logic)
 def refresh_strava_data():
     with st.spinner("🔄 Fetching new activities from Strava..."):
-        # This is the same logic we used in your script
+        import datetime
+        
+        # Get access token
         auth_url = "https://www.strava.com/oauth/token"
         payload = {
             'client_id': st.secrets["connections"]["supabase"]["STRAVA_CLIENT_ID"],
@@ -163,15 +165,49 @@ def refresh_strava_data():
         res = requests.post(auth_url, data=payload).json()
         access_token = res['access_token']
         
-        header = {'Authorization': 'Bearer ' + access_token}
-        activities = requests.get("https://www.strava.com/api/v3/athlete/activities", headers=header).json()
+        # Filter for 2026 activities only
+        start_2026 = datetime.datetime(2026, 1, 1, 0, 0, 0, tzinfo=datetime.timezone.utc)
+        after_timestamp = int(start_2026.timestamp())
         
-        for act in activities:
-            data = {"id": act['id'], "name": act['name'], "distance": act['distance'], 
-                    "type": act['type'], "start_date": act['start_date']}
+        header = {'Authorization': 'Bearer ' + access_token}
+        
+        # Fetch ALL pages for 2026 activities
+        all_activities = []
+        page = 1
+        while True:
+            params = {
+                'after': after_timestamp,
+                'per_page': 200,
+                'page': page
+            }
+            page_activities = requests.get("https://www.strava.com/api/v3/athlete/activities", 
+                                          headers=header, params=params).json()
+            if not page_activities:
+                break
+            all_activities.extend(page_activities)
+            page += 1
+        
+        for act in all_activities:
+            # Fetch full details if moving_time is missing
+            activity = act
+            if 'moving_time' not in act:
+                detail_response = requests.get(
+                    f"https://www.strava.com/api/v3/activities/{act['id']}",
+                    headers=header
+                ).json()
+                activity = detail_response
+            
+            data = {
+                "id": activity['id'], 
+                "name": activity['name'], 
+                "distance": activity['distance'],
+                "moving_time": activity.get('moving_time', 0),
+                "type": activity['type'], 
+                "start_date": activity['start_date']
+            }
             conn.table("activities").upsert(data).execute()
         
-        st.success("✅ Dashboard Updated!")
+        st.success(f"✅ Dashboard Updated! Found {len(all_activities)} activities from 2026.")
 
 # --- DASHBOARD UI ---
 
@@ -190,14 +226,14 @@ df = pd.DataFrame(df_data.data)
 if not df.empty:
     df['start_date'] = pd.to_datetime(df['start_date'])
     df_2026 = df[df['start_date'].dt.year == 2026]
-
-    # Calculate for each activity type
+    
+    # Calculate for Swim, Ride, and Run
     swim_df = df_2026[df_2026['type'] == 'Swim']
-    bike_df = df_2026[df_2026['type'] == 'Ride']  # Assuming 'Ride' for bike
+    ride_df = df_2026[df_2026['type'].isin(['Ride', 'EBikeRide', 'VirtualRide'])]  # All bike types
     run_df = df_2026[df_2026['type'] == 'Run']
     
     swim_km = swim_df['distance'].sum() / 1000
-    bike_km = bike_df['distance'].sum() / 1000
+    ride_km = ride_df['distance'].sum() / 1000
     run_km = run_df['distance'].sum() / 1000
     
     # KPI boxes with Strava styling
@@ -215,8 +251,8 @@ if not df.empty:
     with col2:
         st.markdown(f"""
         <div class="kpi-container">
-            <div class="kpi-value">{bike_km:.1f} km</div>
-            <div class="kpi-label">Bike Distance</div>
+            <div class="kpi-value">{ride_km:.1f} km</div>
+            <div class="kpi-label">Ride Distance</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -229,10 +265,10 @@ if not df.empty:
         """, unsafe_allow_html=True)
     
     # Quick calculations
-    total_distance = df['distance'].sum() / 1000  # Convert meters to km
+    total_distance = df_2026['distance'].sum() / 1000  # Convert meters to km
     
     # Overall metrics with Strava styling
-    st.markdown("### 📈 Overall Statistics")
+    st.markdown("### 📈 2026 Overall Statistics")
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -246,7 +282,7 @@ if not df.empty:
     with col2:
         st.markdown(f"""
         <div class="metric-container">
-            <div class="metric-value">{len(df)}</div>
+            <div class="metric-value">{len(df_2026)}</div>
             <div class="metric-label">Total Activities</div>
         </div>
         """, unsafe_allow_html=True)
