@@ -469,6 +469,7 @@ if not df.empty:
     plt.tight_layout()
     
     st.pyplot(fig)
+
 else:
     st.markdown("""
     <div style="text-align: center; padding: 50px;">
