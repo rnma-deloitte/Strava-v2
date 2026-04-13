@@ -5,6 +5,7 @@ import requests
 import os
 import calendar
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 # Strava-inspired page config
 st.set_page_config(
@@ -227,6 +228,42 @@ if not df.empty:
     df['start_date'] = pd.to_datetime(df['start_date'])
     df_2026 = df[df['start_date'].dt.year == 2026]
     
+# --- YOUR WEEK SECTION (TOP OF PAGE) ---
+    st.markdown("### 🏃 Your Week")
+    
+    # Calculate the start of the current week (Monday)
+    now = datetime.now()
+    start_of_week = pd.to_datetime(now.date() - pd.Timedelta(days=now.weekday()))
+    
+    # Filter for the current week
+    this_week_df = df_2026[df_2026['start_date'] >= start_of_week]
+    
+    week_count = len(this_week_df)
+    week_km = this_week_df['distance'].sum() / 1000
+    week_hours = this_week_df['moving_time'].sum() / 3600
+    
+    # Single-row Flexbox container for mobile-friendly layout
+    st.markdown(f"""
+    <div style="display: flex; justify-content: space-between; align-items: center; 
+                background: white; border: 2px solid #F3F4F6; border-radius: 12px; 
+                padding: 15px; margin: 10px 0; text-align: center;">
+        <div style="flex: 1;">
+            <div style="font-size: 1.2rem; font-weight: bold; color: #111827;">{week_count}</div>
+            <div style="font-size: 0.7rem; color: #6B7280; text-transform: uppercase;">Activities</div>
+        </div>
+        <div style="flex: 1; border-left: 1px solid #F3F4F6; border-right: 1px solid #F3F4F6;">
+            <div style="font-size: 1.2rem; font-weight: bold; color: #111827;">{week_km:.1f}</div>
+            <div style="font-size: 0.7rem; color: #6B7280; text-transform: uppercase;">Kilometers</div>
+        </div>
+        <div style="flex: 1;">
+            <div style="font-size: 1.2rem; font-weight: bold; color: #111827;">{week_hours:.1f}</div>
+            <div style="font-size: 0.7rem; color: #6B7280; text-transform: uppercase;">Hours</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+
     # Calculate for Swim, Ride, and Run
     swim_df = df_2026[df_2026['type'] == 'Swim']
     ride_df = df_2026[df_2026['type'].isin(['Ride', 'EBikeRide', 'VirtualRide'])]  # All bike types
@@ -280,7 +317,7 @@ if not df.empty:
     
     # Quick calculations
     total_distance = df_2026['distance'].sum() / 1000  # Convert meters to km
-    
+   
     # Overall metrics with Strava styling
     st.markdown("### 📈 2026 Overall Statistics")
     col1, col2, col3 = st.columns(3)
@@ -334,18 +371,22 @@ if not df.empty:
             for i, month_name in enumerate(months_to_show[row:row+3]):
                 month_idx = months.index(month_name)  # Get the month index (0-based)
                 with cols[i]:
-                    # Calculate total km for this month
+                    # 1. Calculate total km and hours for this month
                     month_activities = df_2026[
                         (df_2026['start_date'].dt.month == month_idx + 1) & 
                         (df_2026['start_date'].dt.year == current_year)
                     ]
                     month_total_km = month_activities['distance'].sum() / 1000
+                    month_total_hours = month_activities['moving_time'].sum() / 3600 # New Calculation
                     
+                    # 2. Update the display to show both
                     st.markdown(f"""
                     <div class="calendar-month">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div class="calendar-title">{month_name} {current_year}</div>
-                            <div style="color: #FC4C02; font-weight: bold; font-size: 0.9rem;">{month_total_km:.1f} km</div>
+                            <div style="color: #FC4C02; font-weight: bold; font-size: 0.9rem;">
+                                {month_total_km:.1f}km | {month_total_hours:.1f}h
+                            </div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -369,6 +410,65 @@ if not df.empty:
                         calendar_text += week_str + "\n"
                     
                     st.code(calendar_text, language="text")
+
+# --- 📊 MONTHLY PROGRESS BAR CHART (12 MONTHS, ULTRA THIN) ---
+    st.markdown("### 📊 Monthly Progress")
+    
+    # 1. Prepare data for all 12 months of 2026
+    current_month_num = datetime.now().month
+    monthly_stats = []
+    month_names = []
+    
+    for m in range(1, 13):  # Always show all 12 months
+        m_df = df_2026[df_2026['start_date'].dt.month == m]
+        m_hours = m_df['moving_time'].sum() / 3600
+        monthly_stats.append(m_hours)
+        month_names.append(calendar.month_name[m][:3].upper())
+
+    # 2. Create the Figure
+    fig, ax = plt.subplots(figsize=(5, 6))
+    
+    fig.patch.set_facecolor('#0a0a0a')
+    ax.set_facecolor('#0a0a0a')
+
+    # Color Logic: 
+    # Past months = White, Current month = Orange, Future = Transparent/None
+    colors = []
+    for i in range(12):
+        month_no = i + 1
+        if month_no < current_month_num:
+            colors.append('#FFFFFF') # Past
+        elif month_no == current_month_num:
+            colors.append('#FC4C02') # Current
+        else:
+            colors.append('#FFFFFF00') # Future (Transparent)
+
+    # 3. Draw Ultra-Thin bars (width=0.15)
+    ax.bar(month_names, monthly_stats, color=colors, edgecolor='#E5E7EB', linewidth=0.3, width=0.15)
+
+    # 4. Add Labels (Rotated 90 degrees)
+    max_h = max(monthly_stats) if max(monthly_stats) > 0 else 1
+    
+    for i, name in enumerate(month_names):
+        # All 12 month tags at the bottom
+        ax.text(i, -(max_h * 0.05), name, 
+                ha='center', va='top', rotation=90, 
+                fontsize=7, fontweight='bold', color='#E5E7EB')
+
+    # 5. Total hours label on top of the CURRENT month bar only
+    curr_idx = current_month_num - 1
+    curr_val = monthly_stats[curr_idx]
+    if curr_val > 0:
+        ax.text(curr_idx, curr_val + (max_h * 0.02), 
+                f"{int(curr_val)}HRS", 
+                ha='center', va='bottom', rotation=90, 
+                fontsize=8, fontweight='bold', color='#FC4C02')
+
+    # 6. Clean up
+    ax.axis('off')
+    plt.tight_layout()
+    
+    st.pyplot(fig)
 else:
     st.markdown("""
     <div style="text-align: center; padding: 50px;">
