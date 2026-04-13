@@ -229,7 +229,7 @@ if not df.empty:
     df_2026 = df[df['start_date'].dt.year == 2026]
     
 # --- YOUR WEEK SECTION (TOP OF PAGE) ---
-    st.markdown("### 🏃 Your Week")
+    st.markdown("### 🏃 This Week")
     
     # Calculate the start of the current week (Monday)
     now = datetime.now()
